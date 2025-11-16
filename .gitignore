@@ -1,0 +1,46 @@
+# ---- Python ----
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pdb
+*.sqlite3
+*.db
+
+# ---- Virtualenv ----
+.venv/
+venv/
+ENV/
+env/
+
+# ---- PyCharm ----
+.idea/
+*.iml
+
+# ---- Local configs ----
+*.log
+*.tmp
+*.env
+*.local
+.DS_Store
+
+# ---- Coverage / cache ----
+htmlcov/
+.coverage
+.coverage.*
+.pytest_cache/
+.cache/
+
+# ---- Reports ----
+allure-results/
+allure-report/
+reports/
+logs/
+
+# ---- OS-specific ----
+Thumbs.db
+desktop.ini
+
+# ---- Tests Artifacts ----
+tests/screenshots/
+tests/temp/
