@@ -1,26 +1,35 @@
 from helpers.api_client import APIClient
 
 
-def test_ping_liveness_check():
+def test_ping_basic_liveness():
+    """
+    Basic smoke test to confirm the service is alive.
+    Covers:
+    - Correct status code
+    - Correct body text
+    - Correct Content-Type
+    - Fast response time
+    - No HTML returned
+    """
+
     client = APIClient()
     response = client.get("/ping")
 
-    assert response.status_code == 201, (
-        f"Expected status 201, got {response.status_code}, "
-        f"body : {response.text}"
-    )
+    # Status must be 201
+    assert response.status_code == 201, f"Expected 201, got {response.status_code}"
 
-    assert response.text is not None, "Response body is None"
+    # Body must be exactly "Created"
+    body = response.text.strip().lower()
+    assert body == "created", f"Unexpected body: {response.text}"
 
+    # Content-Type must be plain text
     content_type = response.headers.get("Content-Type", "")
-    assert "text/plain" in content_type, (
-        f"Wrong Content-Type: {content_type}"
-    )
+    assert "text/plain" in content_type, f"Wrong Content-Type: {content_type}"
 
+    # Response must be fast
     assert response.elapsed.total_seconds() < 2, (
-        f"Ping took too long: {response.elapsed.total_seconds()} seconds"
+        f"Ping too slow: {response.elapsed.total_seconds()}s"
     )
 
-    assert "<html>" not in response.text.lower(), (
-        f"Server returned HTML instead of plain text: {response.text}"
-    )
+    # No HTML allowed
+    assert "<html>" not in body, "Server returned HTML instead of plain text"
