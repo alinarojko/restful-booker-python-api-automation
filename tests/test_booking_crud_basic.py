@@ -1,3 +1,7 @@
+import json
+from jsonschema import validate
+from jsonschema.exceptions import ValidationError
+from pathlib import Path
 import pytest
 from helpers.api_client import APIClient
 from helpers.booking_helpers import (
@@ -16,7 +20,7 @@ from helpers.booking_payloads import (
     invalid_dates_payload,
 )
 
-
+@pytest.mark.createbooking
 @pytest.mark.booking
 class TestCreateBooking:
     def test_create_booking_success(self):
@@ -56,6 +60,7 @@ class TestCreateBooking:
         print(f"Booking for {data["firstname"]} {data["lastname"]} is done")
 
 
+@pytest.mark.booking
 @pytest.mark.getbooking
 class TestGetBooking:
 
@@ -92,13 +97,33 @@ class TestGetBooking:
         assert response.status_code in (400, 404), (
             f"API must not accept invalid ID formats. Got {response.status_code}")
 
+    def test_get_booking_performance(self):
+        client = APIClient
+        booking_id, _ = create_booking(client)
+        response = get_booking(client, booking_id)
+        elapsed = response.elapsed.total_seconds()
+
+        assert elapsed < 0.5, (
+            f"GET /booking/{booking_id} too slow: {elapsed} seconds")
+
+    def test_get_booking_schema_validation(self):
+        client = APIClient()
+        booking_id, _ = create_booking(client)
+        response = get_booking(client, booking_id)
+        data = response.json()
+        schema_path = "../schemas/booking_schema.json"
+
+        with open(schema_path) as f:
+            schema = json.load(f)
+
+        try:
+            validate(instance=data, schema=schema)
+        except ValidationError as e:
+            assert False, f"JSON schema validation failed: {e.message}"
 
 
-
-
-
-
-
+@pytest.mark.booking
+@pytest.mark.updatebooking
 class TestUpdateBooking:
     pass
 
