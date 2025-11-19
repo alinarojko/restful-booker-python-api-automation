@@ -1,4 +1,5 @@
 from helpers.booking_payloads import valid_booking_payload
+from helpers.api_client import APIClient
 
 
 def create_booking(client, payload=None):
