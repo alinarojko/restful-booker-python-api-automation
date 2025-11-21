@@ -32,7 +32,7 @@ def minimal_payload():
 
 def invalid_payload_missing_fields():
     # Payload intentionally missing required fields.
-    # Used for negative tests.
+    # Used for negative tests_api.
     return {
         "firstname": "Alina"
         # missing lastname, price, depositpaid, bookingdates...
