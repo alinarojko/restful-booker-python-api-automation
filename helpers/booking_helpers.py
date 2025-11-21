@@ -3,11 +3,19 @@ from helpers.api_client import APIClient
 
 
 def create_booking(client, payload=None):
-    # Creates a booking using the provided client.Returns (booking_id, full_response).
+    # Creates a booking using the provided client.
+    # Returns (booking_id, full_response).
+
     body = payload or valid_booking_payload()
     response = client.post("/booking", json=body)
 
-    booking_id = response.json().get("bookingid")
+    booking_id = None
+    try:
+        data = response.json()
+        booking_id = data.get("bookingid")
+    except Exception:
+        booking_id = None
+
     return booking_id, response
 
 

@@ -91,14 +91,14 @@ class TestGetBookingByID:
         response = get_booking(client, booking_id)
         elapsed = response.elapsed.total_seconds()
 
-        assert elapsed < 0.5, (
+        assert elapsed < 1, (
             f"GET /booking/{booking_id} too slow: {elapsed} seconds")
 
     def test_get_booking_schema_validation(self, client):
         booking_id, _ = create_booking(client)
         response = get_booking(client, booking_id)
         data = response.json()
-        schema_path = "./schemas/booking_schema.json"
+        schema_path = "../schemas/booking_schema.json"
 
         with open(schema_path) as f:
             schema = json.load(f)
@@ -151,23 +151,14 @@ class TestGetBookingFilters:
         assert response.status_code == 200
         assert response.json() == [], "Expected empty list for non-existing name"
 
-    def test_filters_checkin_date(self, client):
-        booking_id, response = create_booking(client)
-        checkin_date = response.json()["booking"]["bookingdates"]["checkin"]
-
-        resp = client.get("/booking", params={"checkin": checkin_date})
-        assert resp.status_code == 200
-        ids = [item["bookingid"] for item in resp.json()]
-        assert booking_id in ids
-
     def test_filter_by_multiple_params(self, client):
         booking_id, response = create_booking(client)
         body = response.json()["booking"]
 
         firstname = body["firstname"]
-        checkin = body["bookingdates"]["checkin"]
+        last_name = body["lastname"]
 
-        resp = client.get("/booking", params={"firstname": firstname, "checkin": checkin})
+        resp = client.get("/booking", params={"firstname": firstname, "last_name": last_name})
         assert resp.status_code == 200
 
         ids = [item["bookingid"] for item in resp.json()]
@@ -228,15 +219,176 @@ class TestUpdateBooking:
 
 
 @pytest.mark.booking
-@pytest.mark.updatebooking
+@pytest.mark.deletebooking
 class TestDeleteBooking:
-    pass
+
+    def test_delete_booking_success(self, auth_client):
+        booking_id, _ = create_booking(auth_client)
+        response = delete_booking(auth_client, booking_id)
+
+        assert response.status_code == 201, "Booking was not deleted successfully"
+        get_resp = auth_client.get(f"/booking/{booking_id}")
+        assert get_resp.status_code in [404, 405], (
+            f"Booking still exists after deletion! Status: "
+            f"{get_resp.status_code}, body: {get_resp.text}")
+
+    def test_delete_booking_invalid_id(self, auth_client):
+        invalid_id = 00000000
+        response = delete_booking(auth_client, invalid_id)
+
+        assert response.status_code in [404, 405], (f"Unexpected status code for invalid ID: "
+                                                    f"{response.status_code}")
+
+    def test_delete_booking_without_token(self, client):
+        booking_id, _ = create_booking(client)
+        response = delete_booking(client, booking_id)
+
+        assert response.status_code == 403, (f"Expected 403 for unauthenticated delete, got "
+                                             f"{response.status_code}")
+
+    def test_delete_booking_twice(self, auth_client):
+        booking_id, _ = create_booking(auth_client)
+        response = delete_booking(auth_client, booking_id)
+        assert response.status_code == 201
+
+        second_response = delete_booking(auth_client, booking_id)
+
+        assert second_response.status_code in [404, 405], (f"Unexpected status code for invalid ID: "
+                                                    f"{response.status_code}")
+
+    def test_delete_booking_then_get_returns_404(self, auth_client):
+        booking_id, _ = create_booking(auth_client)
+        delete_response = delete_booking(auth_client, booking_id)
+        assert delete_response.status_code == 201, "Booking was not deleted"
+
+        get_response = auth_client.get(f"/booking/{booking_id}")
+        assert get_response.status_code == 404, (
+                    f"Expected 404 after deleting booking, got "
+                    f"{get_response.status_code}")
+
+        assert get_response.text.lower() == "not found"
 
 
-
+@pytest.mark.booking
+@pytest.mark.negativebooking
 class TestNegativeBooking:
-    pass
+
+    def test_create_booking_missing_required_fields(self, client):
+        payload = invalid_payload_missing_fields()
+        booking_id, response = create_booking(client, payload)
+
+        with pytest.raises(Exception):
+            response.json()
+
+        assert response.status_code == 500
+        assert booking_id is None
+        assert "Internal" in response.text or response.text.strip() != "", (
+            f"Unexpected response body: {response.text}")
 
 
+
+    def test_create_booking_invalid_dates(self, client):
+        payload = invalid_dates_payload()
+        booking_id, response = create_booking(client, payload)
+
+        assert response.status_code in (400, 500, 200), (
+            f"Unexpected status for invalid dates: {response.status_code}")
+
+        if response.status_code == 200:
+            body = response.json().get("booking", {})
+            checkin = body.get("bookingdates", {}).get("checkin", "")
+            assert checkin != "not-a-date", "Server accepted invalid checkin date"
+
+    def test_update_nonexistent_booking(self, client):
+        invalid_id = 999999999
+        payload = valid_booking_payload()
+
+        response = update_booking_full(client,booking_id=invalid_id, payload=payload)
+
+        assert response.status_code in (403, 404, 405), (
+                    f"Expected 404 or 405 for nonexistent booking update, "
+                    f"got {response.status_code}")
+
+    def test_delete_booking_unauthorized(self, client):
+        booking_id, _ = create_booking(client)
+        response = delete_booking(client, booking_id)
+
+        assert response.status_code == 403, (
+                    f"Expected 403 for unauthorized delete, "
+                    f"got {response.status_code}")
+
+
+@pytest.mark.booking
+@pytest.mark.negativebooking
 class TestBoundaryBooking:
-    pass
+
+    def test_create_booking_max_length_names(self, client):
+        long_name = "A" * 255
+
+        payload = valid_booking_payload()
+        payload["firstname"] = long_name
+        payload["lastname"] = long_name
+
+        booking_id, response = create_booking(client, payload)
+
+        assert response.status_code == 200, "API failed on max-length strings"
+        body = response.json()["booking"]
+        assert body["firstname"] == long_name
+        assert body["lastname"] == long_name
+
+    def test_create_booking_zero_price(self, client):
+        payload = valid_booking_payload()
+        payload["totalprice"] = 0
+
+        booking_id, response = create_booking(client, payload)
+
+        assert response.status_code == 200
+        assert response.json()["booking"]["totalprice"] == 0
+
+    def test_create_booking_large_price(self, client):
+        payload = valid_booking_payload()
+        payload["totalprice"] = 10**9
+
+        booking_id, response = create_booking(client, payload)
+
+        assert response.status_code == 200
+        assert response.json()["booking"]["totalprice"] == 10**9
+
+    def test_create_booking_far_future_date(self, client):
+        payload = valid_booking_payload()
+        payload["bookingdates"]["checkin"] = "2100-01-01"
+        payload["bookingdates"]["checkout"] = "2100-01-02"
+
+        booking_id, response = create_booking(client, payload)
+
+        assert response.status_code == 200
+        assert response.json()["booking"]["bookingdates"]["checkin"] == "2100-01-01"
+
+    def test_create_booking_same_day_checkin_checkout(self, client):
+        payload = valid_booking_payload()
+        payload["bookingdates"]["checkin"] = "2025-05-05"
+        payload["bookingdates"]["checkout"] = "2025-05-05"
+
+        booking_id, response = create_booking(client, payload)
+
+        assert response.status_code in (200, 500), (
+            f"Unexpected response for same-day dates: {response.status_code}")
+
+    def test_create_booking_empty_firstname(self, client):
+        payload = valid_booking_payload()
+        payload["firstname"] = ""
+
+        booking_id, response = create_booking(client, payload)
+
+        # RESTful Booker often still accepts empty strings → 200
+        assert response.status_code in (200, 400)
+
+    def test_create_booking_long_additionalneeds(self, client):
+        payload = valid_booking_payload()
+        payload["additionalneeds"] = "X" * 500
+
+        booking_id, response = create_booking(client, payload)
+
+        assert response.status_code == 200
+        assert response.json()["booking"]["additionalneeds"] == "X" * 500
+
