@@ -10,11 +10,31 @@ class HomePage(BasePage):
     def __init__(self, page: Page, base_url: str):
         super().__init__(page, base_url)
 
+        # restrict to top navigation bar only
+        navbar = page.locator("#navbarNav")
+
+        self.nav_rooms = navbar.get_by_role("link", name="Rooms")
+        self.nav_booking = navbar.get_by_role("link", name="Booking")
+        self.nav_amenities = navbar.get_by_role("link", name="Amenities")
+        self.nav_location = navbar.get_by_role("link", name="Location")
+        self.nav_contact = navbar.get_by_role("link", name="Contact")
+        self.nav_admin = navbar.get_by_role("link", name="Admin")
+
     def open(self):
-        """Open the home page (base URL)."""
         super().open()
 
     def is_loaded(self) -> bool:
-        """Check that main heading is visible = page loaded correctly."""
         heading = self.page.get_by_role("heading", name=self.MAIN_HEADING_NAME)
         return heading.is_visible()
+
+    def go_to_rooms(self):
+        self.nav_rooms.click()
+
+    def go_to_booking(self):
+        self.nav_booking.click()
+
+    def go_to_contact(self):
+        self.nav_contact.click()
+
+    def go_to_admin(self):
+        self.nav_admin.click()
