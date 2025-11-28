@@ -1,0 +1,1 @@
+{"bookingid":1694,"booking":{"firstname":"Alina","lastname":"QA","totalprice":123,"depositpaid":true,"bookingdates":{"checkin":"0NaN-aN-aN","checkout":"0NaN-aN-aN"}}}

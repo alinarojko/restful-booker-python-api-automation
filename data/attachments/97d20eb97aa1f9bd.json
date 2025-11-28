@@ -1,0 +1,11 @@
+{
+  "firstname": "Alina-\u6d4b\u8bd5-\u00c4\u00d6\u00dc",
+  "lastname": "O'Connor-\u6d4b\u8bd5",
+  "totalprice": 111,
+  "depositpaid": true,
+  "bookingdates": {
+    "checkin": "2025-01-01",
+    "checkout": "2025-01-05"
+  },
+  "additionalneeds": "Breakfast"
+}
