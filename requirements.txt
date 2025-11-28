@@ -3,5 +3,7 @@ requests==2.32.3
 jsonschema~=4.25.1
 allure-pytest==2.13.5
 allure-python-commons==2.13.5
+allure-pytest
+pytest-rerunfailures
 
 
