@@ -42,4 +42,10 @@ class APIClient:
         return self.session.post(self.base_url + endpoint, headers=self._headers(), json=json)
 
     def put(self, endpoint: str, json: dict | None = None):
-        return self.session.put(self.b
+        return self.session.put(self.base_url + endpoint, headers=self._headers(), json=json)
+
+    def patch(self, endpoint: str, json: dict | None = None):
+        return self.session.patch(self.base_url + endpoint, headers=self._headers(), json=json)
+
+    def delete(self, endpoint: str):
+        return self.session.delete(self.base_url + endpoint, headers=self._headers())
